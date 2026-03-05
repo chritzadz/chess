@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
 public class Board extends JPanel {
@@ -8,14 +10,32 @@ public class Board extends JPanel {
     private ArrayList<Position> highlightedMoves = new ArrayList<>();
     private ArrayList<Position> highlightedCaptureMoves = new ArrayList<>();
     private Position selectedSquare = null;
+    private long zobristKey = 0L;
+    private boolean whiteToMove = true;
 
     public Board(String imagePath) {
         this.boardImage = new ImageIcon(imagePath).getImage();
         this.pieces = new ArrayList<>();
 
-        addMouseListener(new java.awt.event.MouseAdapter() {
+        addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
+            public void mouseClicked(MouseEvent e) {
+                if (selectedSquare != null){
+                    int squareWidth = getWidth() / 8;
+                    int squareHeight = getHeight() / 8;
+                    int col = (e.getX() - 3) / squareWidth;
+                    int row = (e.getY() - 3) / squareHeight;
+                    Position clickedPos = Position.getPosition(row, col);
+                    
+                    if (highlightedMoves.contains(clickedPos) || highlightedCaptureMoves.contains(clickedPos)) {
+                        Piece pieceToMove = getPiece(selectedSquare);
+                        if (pieceToMove != null) {
+                            move(pieceToMove, clickedPos);
+                        }
+                        return; // exit after move
+                    }
+                }
+
                 int squareWidth = getWidth() / 8;
                 int squareHeight = getHeight() / 8;
                 int col = (e.getX() - 3) / squareWidth;
@@ -30,6 +50,10 @@ public class Board extends JPanel {
                     int prow = idx[0];
                     int pcol = idx[1];
                     if (prow == row && pcol == col) {
+                        Color currentTurn = whiteToMove ? Color.WHITE : Color.BLACK;
+                        if (piece.getPieceColor() != currentTurn) {
+                            break; //skip, not your turn
+                        }
                         ArrayList<String> moves = piece.getMoves();
                         ArrayList<String> captureMoves = piece.getCaptureMoves();
                         for (String move : moves) {
@@ -98,6 +122,7 @@ public class Board extends JPanel {
 
     public void addPiece(Piece piece) {
         pieces.add(piece);
+        zobristKey ^= Zobrist.getPieceSquareHash(piece, piece.getPosition());
         repaint();
     }
 
@@ -124,6 +149,50 @@ public class Board extends JPanel {
             }
         }
         return null;
+    }
+
+    public void move(Piece piece, Position newPosition){
+        Position oldPosition = piece.getPosition();
+        
+        //XOR old square
+        zobristKey ^= Zobrist.getPieceSquareHash(piece, oldPosition);
+        
+        Piece captured = getPiece(newPosition);
+        if (captured != null) {
+            // XOR captured piece
+            zobristKey ^= Zobrist.getPieceSquareHash(captured, newPosition);
+            pieces.remove(captured);
+        }
+        
+        // updated piece position
+        piece.setPosition(newPosition);
+        
+        // XOR new piece in
+        zobristKey ^= Zobrist.getPieceSquareHash(piece, newPosition);
+        
+        // toggling
+        zobristKey ^= Zobrist.getSideToMoveHash();
+        whiteToMove = !whiteToMove;
+        
+        selectedSquare = null;
+        highlightedMoves.clear();
+        highlightedCaptureMoves.clear();
+
+        evaluate();
+
+        repaint();
+    }
+    
+    public long getZobristKey() {
+        return zobristKey;
+    }
+    
+    public void recalculateZobristKey() {
+        zobristKey = Zobrist.computeHash(pieces, whiteToMove);
+    }
+    
+    public boolean isWhiteToMove() {
+        return whiteToMove;
     }
     
     static public boolean inBound(){

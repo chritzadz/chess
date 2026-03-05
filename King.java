@@ -69,10 +69,14 @@ public class King implements Piece {
     public Position getPosition() {
         return currentPosition;
     }
+
+    @Override
+    public void setPosition(Position pos) {
+        this.currentPosition = pos;
+    }
+
     @Override
     public String getImagePath() {
         return imagePath;
     }
-
-
 }

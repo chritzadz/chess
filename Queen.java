@@ -155,6 +155,11 @@ public class Queen implements Piece {
     }
 
     @Override
+    public void setPosition(Position pos) {
+        this.currentPosition = pos;
+    }
+
+    @Override
     public String getImagePath() {
         return imagePath;
     }

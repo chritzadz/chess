@@ -52,6 +52,8 @@ public class Pawn implements Piece {
         } else if (color == Color.BLACK) {
             int forward = row + 1;
             int doubleForward = row + 2;
+            int left = col - 1;
+            int right = col + 1;
 
             // FORWARD MOVE
             if (forward <= 7) {
@@ -64,6 +66,25 @@ public class Pawn implements Piece {
                 Position doubleForwardMove = Position.getPosition(doubleForward, col);
                 moves.add(doubleForwardMove.name());
                 hasMove = true;
+            }
+
+            //CAPTURE MOVE
+            if (left >= 0 && right <= 7 && forward < 7){
+                Position leftCapture = Position.getPosition(forward, left);
+                Position rightCapture = Position.getPosition(forward, right);
+
+                if (board.getPiece(leftCapture) != null && board.getPiece(leftCapture).getPieceColor() != this.color) {
+                    captureMoves.add(leftCapture.name());
+                }
+                if (board.getPiece(rightCapture) != null && board.getPiece(rightCapture).getPieceColor() != this.color) {
+                    captureMoves.add(rightCapture.name());
+                }
+            }
+
+            //PROMOTION
+            if (forward == 7) {
+                Position promotionPosition = Position.getPosition(forward, col);
+                moves.add(promotionPosition.name()); //for now do nothing just add to normal move
             }
         }
         return moves;
@@ -82,6 +103,11 @@ public class Pawn implements Piece {
     @Override
     public Position getPosition() {
         return currentPosition;
+    }
+
+    @Override
+    public void setPosition(Position pos) {
+        this.currentPosition = pos;
     }
 
     @Override
