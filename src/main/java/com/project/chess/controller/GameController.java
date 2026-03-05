@@ -2,8 +2,13 @@ package com.project.chess.controller;
 
 
 import com.project.chess.dto.MoveRequest;
+import com.project.chess.entity.Games;
 import com.project.chess.model.GameState;
+import com.project.chess.repository.GamesRepository;
 import com.project.chess.service.GameService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,24 +18,21 @@ public class GameController {
 
     private final GameService gameService;
 
+    @Autowired
+    private GamesRepository gamesRepository;
+
     public GameController(GameService gameService) {
         this.gameService = gameService;
     }
 
-    @GetMapping("/state")
-    public GameState getGameState() {
-        return gameService.getGameState();
-    }
+    @GetMapping("/id")
+    public ResponseEntity<?> getGame(@RequestParam String id) {
+        if (!gamesRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Game not found");
+        }
 
-    @PostMapping("/move")
-    public GameState makeMove(@RequestBody MoveRequest request) {
-        gameService.makeMove(request.getFrom(), request.getTo());
-        return gameService.getGameState();
-    }
-
-    @PostMapping("/reset")
-    public GameState resetGame(@RequestParam(value = "color", defaultValue = "WHITE") String color) {
-        gameService.resetGame(color);
-        return gameService.getGameState();
+        Games game = gamesRepository.findById(id).orElse(null);
+        return ResponseEntity.ok(game);
     }
 }
+

@@ -5,94 +5,118 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import com.project.chess.model.GameEngine;
 
 public class SocketConnectionHandler extends TextWebSocketHandler {
-    private final Map<String, WebSocketSession> userSessions = new HashMap<>();
-    private String player1UserId = null;
-    private String player2UserId = null;
-    private GameEngine gameEngine = new GameEngine();
-    private boolean isPlayer1Turn = true;
+    // Map<gameId, Map<userId, WebSocketSession>>
+    private static final Map<String, Map<String, WebSocketSession>> gameUserSessions = new HashMap<>();
+    // Map<gameId, GameEngine>
+    private static final Map<String, GameEngine> gameEngines = new HashMap<>();
+    // Map<gameId, Boolean> (true: player1's turn, false: player2's turn)
+    private static final Map<String, Boolean> gameTurns = new HashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        System.out.println("Connection established: " + session.getId());
+        String gameId = getGameId(session);
+        if (gameId == null) {
+            session.close();
+            return;
+        }
+        gameUserSessions.computeIfAbsent(gameId, k -> new HashMap<>());
+        gameEngines.computeIfAbsent(gameId, k -> new GameEngine());
+        gameTurns.putIfAbsent(gameId, true); // Player 1's turn by default
+        System.out.println("Connection established for gameId: " + gameId + ", session: " + session.getId());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        String gameId = getGameId(session);
+        if (gameId == null) return;
         String userIdToRemove = null;
-        for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
-            if (entry.getValue().getId().equals(session.getId())) {
-                userIdToRemove = entry.getKey();
-                break;
+        Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
+        if (userSessions != null) {
+            for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
+                if (entry.getValue().getId().equals(session.getId())) {
+                    userIdToRemove = entry.getKey();
+                    break;
+                }
+            }
+            if (userIdToRemove != null) {
+                userSessions.remove(userIdToRemove);
+                System.out.println("User disconnected: " + userIdToRemove + " from gameId: " + gameId);
+            }
+            // If all users disconnected, clean up game state
+            if (userSessions.isEmpty()) {
+                gameUserSessions.remove(gameId);
+                gameEngines.remove(gameId);
+                gameTurns.remove(gameId);
+                System.out.println("Game state cleaned up for gameId: " + gameId);
             }
         }
-        if (userIdToRemove != null) {
-            userSessions.remove(userIdToRemove);
-            System.out.println("User disconnected: " + userIdToRemove);
-            if (userIdToRemove.equals(player1UserId)) {
-                player1UserId = null;
-                System.out.println("Player 1 disconnected");
-            }
-            if (userIdToRemove.equals(player2UserId)) {
-                player2UserId = null;
-                System.out.println("Player 2 disconnected");
-            }
-        }
-        // Reset game state if a player disconnects
-        gameEngine = new GameEngine();
-        isPlayer1Turn = true;
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String msg = message.getPayload().trim();
-        System.out.println("Raw message received: " + msg);
-        
-        // Handle user registration
-        if (msg.startsWith("USER:")) {
-            handleUserRegistration(session, msg);
+        String gameId = getGameId(session);
+        if (gameId == null) {
+            session.sendMessage(new TextMessage("ERROR:Game ID missing"));
             return;
         }
-        
+        Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
+        if (userSessions == null) {
+            session.sendMessage(new TextMessage("ERROR:Game not found"));
+            return;
+        }
+        String msg = message.getPayload().trim();
+        System.out.println("Raw message received for gameId " + gameId + ": " + msg);
+
+        // Handle user registration
+        if (msg.startsWith("USER:")) {
+            handleUserRegistration(session, msg, gameId);
+            return;
+        }
+
         // Find userId for this session
-        String userId = findUserIdBySession(session);
-        
+        String userId = findUserIdBySession(session, userSessions);
+
         if (userId == null) {
             System.out.println("Message from unregistered session: " + session.getId());
             session.sendMessage(new TextMessage("ERROR:Please register first with USER:yourUserId"));
             return;
         }
-        
+
         // Log who sent the message
-        String sender = getSenderName(userId);
+        String sender = getSenderName(userId, gameId);
         System.out.println("Processing message from " + sender + ": " + msg);
-        
+
         // Validate it's the correct player's turn
-        if (!isCorrectPlayerTurn(userId)) {
+        if (!isCorrectPlayerTurn(userId, gameId)) {
             System.out.println("Wrong turn attempt by " + sender);
             session.sendMessage(new TextMessage("ERROR:Not your turn"));
             return;
         }
-        
+
         // Process the move
         try {
+            GameEngine gameEngine = gameEngines.get(gameId);
             System.out.println("Processing move for " + sender);
             gameEngine.processMove(msg);
-            
+
             String gameState = gameEngine.getGameStateString();
             System.out.println("Game state after move: " + gameState);
-            
-            // Broadcast to all connected players
-            broadcastGameState(gameState);
-            
+
+            // Broadcast to all connected players in this game
+            broadcastGameState(gameState, userSessions);
+
             // Switch turns
-            isPlayer1Turn = !isPlayer1Turn;
-            System.out.println("Turn switched. Next turn: " + (isPlayer1Turn ? "Player 1" : "Player 2"));
-            
+            boolean isPlayer1Turn = gameTurns.getOrDefault(gameId, true);
+            gameTurns.put(gameId, !isPlayer1Turn);
+            System.out.println("Turn switched. Next turn: " + (!isPlayer1Turn ? "Player 1" : "Player 2"));
+
         } catch (Exception e) {
             System.err.println("Error processing move: " + e.getMessage());
             e.printStackTrace();
@@ -100,37 +124,38 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
     }
     
-    private void handleUserRegistration(WebSocketSession session, String msg) throws Exception {
+    private void handleUserRegistration(WebSocketSession session, String msg, String gameId) throws Exception {
+        Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
+        if (userSessions == null) return;
         String userId = msg.substring(5).trim();
-        
+
         if (userId.isEmpty()) {
             session.sendMessage(new TextMessage("ERROR:User ID cannot be empty"));
             return;
         }
-        
+
         // Check if user is already registered
         if (userSessions.containsKey(userId)) {
             System.out.println("Duplicate registration attempt: " + userId);
             session.sendMessage(new TextMessage("ERROR:User ID already registered"));
             return;
         }
-        
+
         userSessions.put(userId, session);
-        
-        if (player1UserId == null) {
-            player1UserId = userId;
-            System.out.println("Registered Player 1: " + userId);
+
+        // Determine player1/player2 for this game
+        int playerCount = userSessions.size();
+        if (playerCount == 1) {
             session.sendMessage(new TextMessage("REGISTERED:Player1"));
-        } else if (player2UserId == null) {
-            player2UserId = userId;
-            System.out.println("Registered Player 2: " + userId);
+            System.out.println("Registered Player 1: " + userId + " for gameId: " + gameId);
+        } else if (playerCount == 2) {
             session.sendMessage(new TextMessage("REGISTERED:Player2"));
-            
+            System.out.println("Registered Player 2: " + userId + " for gameId: " + gameId);
             // Game can start
+            GameEngine gameEngine = gameEngines.get(gameId);
             String initialState = gameEngine.getGameStateString();
-            System.out.println("Initial game state: " + initialState);
-            broadcastGameState(initialState);
-            System.out.println("Game started! Player 1's turn");
+            broadcastGameState(initialState, userSessions);
+            System.out.println("Game started for gameId: " + gameId + ". Player 1's turn");
         } else {
             System.out.println("Game full, rejecting: " + userId);
             userSessions.remove(userId);
@@ -138,7 +163,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
     }
     
-    private String findUserIdBySession(WebSocketSession session) {
+    private String findUserIdBySession(WebSocketSession session, Map<String, WebSocketSession> userSessions) {
         for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
             if (entry.getValue().getId().equals(session.getId())) {
                 return entry.getKey();
@@ -147,33 +172,36 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         return null;
     }
     
-    private String getSenderName(String userId) {
-        if (userId.equals(player1UserId)) {
+    private String getSenderName(String userId, String gameId) {
+        Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
+        if (userSessions == null) return userId;
+        ArrayList<String> users = new ArrayList<>(userSessions.keySet());
+        if (users.size() > 0 && userId.equals(users.get(0))) {
             return "Player 1 (" + userId + ")";
-        } else if (userId.equals(player2UserId)) {
+        } else if (users.size() > 1 && userId.equals(users.get(1))) {
             return "Player 2 (" + userId + ")";
         }
         return userId;
     }
     
-    private boolean isCorrectPlayerTurn(String userId) {
-        if (player1UserId == null || player2UserId == null) {
+    private boolean isCorrectPlayerTurn(String userId, String gameId) {
+        Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
+        if (userSessions == null || userSessions.size() < 2) {
             System.out.println("Game not ready - both players must be connected");
             return false;
         }
-        
-        if (isPlayer1Turn && userId.equals(player1UserId)) {
+        ArrayList<String> users = new ArrayList<>(userSessions.keySet());
+        boolean isPlayer1Turn = gameTurns.getOrDefault(gameId, true);
+        if (isPlayer1Turn && userId.equals(users.get(0))) {
             return true;
         }
-        
-        if (!isPlayer1Turn && userId.equals(player2UserId)) {
+        if (!isPlayer1Turn && users.size() > 1 && userId.equals(users.get(1))) {
             return true;
         }
-        
         return false;
     }
     
-    private void broadcastGameState(String gameState) {
+    private void broadcastGameState(String gameState, Map<String, WebSocketSession> userSessions) {
         System.out.println("Broadcasting game state to " + userSessions.size() + " players");
         for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
             try {
@@ -188,5 +216,18 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
                 e.printStackTrace();
             }
         }
+    }
+    // Helper to extract gameId from query string
+    private String getGameId(WebSocketSession session) {
+        String query = session.getUri() != null ? session.getUri().getQuery() : null;
+        if (query != null) {
+            for (String param : query.split("&")) {
+                String[] kv = param.split("=");
+                if (kv.length == 2 && kv[0].equals("id")) {
+                    return kv[1];
+                }
+            }
+        }
+        return null;
     }
 }
