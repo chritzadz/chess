@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . ./
 
-RUN ./mvnw -DoutputFile=target/mvn-dependency-list.log -B -DskipTests clean dependency:list install
+RUN mvn -B -DskipTests clean package
 
 EXPOSE 8080
 
