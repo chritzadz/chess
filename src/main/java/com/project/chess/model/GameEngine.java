@@ -36,6 +36,23 @@ public class GameEngine {
         recalculateZobristKey();
     }
 
+    public String processMove(String move){
+        move = move.trim();
+        if (move.length() == 4) {
+            String fromStr = move.substring(0, 2);
+            String toStr = move.substring(2, 4);
+            Position from = Position.fromAlgebraic(fromStr);
+            Position to = Position.fromAlgebraic(toStr);
+            boolean success = move(from, to);
+            if (success) {
+                return "OK";
+            } else {
+                return "ILLEGAL";
+            }
+        }
+        return "INVALID";
+    }
+
     private void initFromFen(String fenString) {
         String[] rows = fenString.split("/");
         int rowIndex = 0;
@@ -270,5 +287,34 @@ public class GameEngine {
 
     public void reset(Color playerColor) {
         initializeBoard(playerColor);
+    }
+
+    public String getGameStateString() {
+        StringBuilder sb = new StringBuilder();
+        String[][] board = new String[8][8];
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                board[r][c] = ".";
+            }
+        }
+        for (Piece p : pieces) {
+            int[] idx = Position.getOrdinal(p.getPosition());
+            String symbol = p.getClass().getSimpleName().substring(0,1);
+            if (p.getPieceColor() == Color.WHITE) symbol = symbol.toUpperCase();
+            else symbol = symbol.toLowerCase();
+            board[idx[0]][idx[1]] = symbol;
+        }
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                sb.append(board[r][c]).append(" ");
+            }
+            sb.append("  ").append(8 - r).append("\n");
+        }
+        sb.append("a b c d e f g h\n");
+        sb.append("Turn: ").append(whiteToMove ? "White" : "Black").append("\n");
+        if (gameOver) {
+            sb.append("Game Over! Winner: ").append(winner).append("\n");
+        }
+        return sb.toString();
     }
 }

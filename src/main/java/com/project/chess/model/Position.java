@@ -23,4 +23,13 @@ public enum Position {
         if (idx < 0 || idx > 63) return null;
         return Position.values()[idx];
     }
+
+    public static Position fromAlgebraic(String algebraic) {
+        if (algebraic == null || algebraic.length() != 2) return null;
+        char file = algebraic.charAt(0);
+        char rank = algebraic.charAt(1);
+        int col = file - 'a';
+        int row = 8 - (rank - '0');
+        return getPosition(row, col);
+    }
 }
