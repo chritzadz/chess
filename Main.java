@@ -9,7 +9,7 @@ public class Main extends JPanel{
     public Main() throws IOException {
         JFrame frame = new JFrame();
         Board board = new Board("board.png");
-        board.setPreferredSize(new Dimension(524, 524));
+        board.setPreferredSize(new Dimension(145, 145));
 
         //set piece example
         String content = Files.readString(Path.of("fen.txt"), StandardCharsets.UTF_8);

@@ -110,4 +110,9 @@ public class Bishop implements Piece {
     public String getImagePath() {
         return imagePath;
     }
+
+    @Override
+    public int getValue() {
+        return 3;
+    }
 }

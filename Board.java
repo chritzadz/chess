@@ -5,6 +5,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
 public class Board extends JPanel {
+    private static final int BORDER_OFFSET = 0; // Adjust this to match your board image border
     private final Image boardImage;
     private ArrayList<Piece> pieces;
     private ArrayList<Position> highlightedMoves = new ArrayList<>();
@@ -23,8 +24,8 @@ public class Board extends JPanel {
                 if (selectedSquare != null){
                     int squareWidth = getWidth() / 8;
                     int squareHeight = getHeight() / 8;
-                    int col = (e.getX() - 3) / squareWidth;
-                    int row = (e.getY() - 3) / squareHeight;
+                    int col = (e.getX() - BORDER_OFFSET) / squareWidth;
+                    int row = (e.getY() - BORDER_OFFSET) / squareHeight;
                     Position clickedPos = Position.getPosition(row, col);
                     
                     if (highlightedMoves.contains(clickedPos) || highlightedCaptureMoves.contains(clickedPos)) {
@@ -34,12 +35,16 @@ public class Board extends JPanel {
                         }
                         return; // exit after move
                     }
+
+                    selectedSquare = null;
+                    highlightedMoves.clear();
+                    highlightedCaptureMoves.clear();
                 }
 
                 int squareWidth = getWidth() / 8;
                 int squareHeight = getHeight() / 8;
-                int col = (e.getX() - 3) / squareWidth;
-                int row = (e.getY() - 3) / squareHeight;
+                int col = (e.getX() - BORDER_OFFSET) / squareWidth;
+                int row = (e.getY() - BORDER_OFFSET) / squareHeight;
 
                 selectedSquare = Position.getPosition(row, col);
                 highlightedMoves.clear();
@@ -56,16 +61,24 @@ public class Board extends JPanel {
                         }
                         ArrayList<String> moves = piece.getMoves();
                         ArrayList<String> captureMoves = piece.getCaptureMoves();
+                        
+                        // Only add moves that are legal (don't leave king in check)
                         for (String move : moves) {
                             try {
-                                highlightedMoves.add(Position.valueOf(move));
+                                Position targetPos = Position.valueOf(move);
+                                if (isLegalMove(piece, targetPos)) {
+                                    highlightedMoves.add(targetPos);
+                                }
                             } catch (IllegalArgumentException ex) {
                                 // ignore invalid
                             }
                         }
                         for (String move : captureMoves) {
                             try {
-                                highlightedCaptureMoves.add(Position.valueOf(move));
+                                Position targetPos = Position.valueOf(move);
+                                if (isLegalMove(piece, targetPos)) {
+                                    highlightedCaptureMoves.add(targetPos);
+                                }
                             } catch (IllegalArgumentException ex) {
                                 // ignore invalid
                             }
@@ -90,8 +103,8 @@ public class Board extends JPanel {
             int[] idx = Position.getOrdinal(selectedSquare);
             int row = idx[0];
             int col = idx[1];
-            int x = col * squareWidth + 3;
-            int y = row * squareHeight + 3;
+            int x = col * squareWidth + BORDER_OFFSET;
+            int y = row * squareHeight + BORDER_OFFSET;
             g.fillRect(x, y, squareWidth, squareHeight);
         }
         // Draw normal moves in green
@@ -101,8 +114,8 @@ public class Board extends JPanel {
             int[] idx = Position.getOrdinal(pos);
             int row = idx[0];
             int col = idx[1];
-            int x = col * squareWidth + 3;
-            int y = row * squareHeight + 3;
+            int x = col * squareWidth + BORDER_OFFSET;
+            int y = row * squareHeight + BORDER_OFFSET;
             g.fillOval(x + squareWidth/4, y + squareHeight/4, squareWidth/2, squareHeight/2);
         }
         // Draw capture moves in red
@@ -111,8 +124,8 @@ public class Board extends JPanel {
             int[] idx = Position.getOrdinal(pos);
             int row = idx[0];
             int col = idx[1];
-            int x = col * squareWidth + 3;
-            int y = row * squareHeight + 3;
+            int x = col * squareWidth + BORDER_OFFSET;
+            int y = row * squareHeight + BORDER_OFFSET;
             g.fillOval(x + squareWidth/4, y + squareHeight/4, squareWidth/2, squareHeight/2);
         }
         for (Piece piece : pieces) {
@@ -136,8 +149,8 @@ public class Board extends JPanel {
 
         int squareWidth = getWidth() / 8;
         int squareHeight = getHeight() / 8;
-        int x = col * squareWidth + 3;
-        int y = row * squareHeight + 3;
+        int x = col * squareWidth + BORDER_OFFSET;
+        int y = row * squareHeight + BORDER_OFFSET;
 
         g.drawImage(pieceImage, x, y, squareWidth, squareHeight, this);
     }
@@ -153,7 +166,6 @@ public class Board extends JPanel {
 
     public void move(Piece piece, Position newPosition){
         Position oldPosition = piece.getPosition();
-        
         //XOR old square
         zobristKey ^= Zobrist.getPieceSquareHash(piece, oldPosition);
         
@@ -178,9 +190,49 @@ public class Board extends JPanel {
         highlightedMoves.clear();
         highlightedCaptureMoves.clear();
 
+        update(piece);
         evaluate();
-
         repaint();
+    }
+
+    private void evaluate(){
+        int whiteScoreByMaterials = 0;
+        int blackScoreByMaterials = 0;
+        for (Piece p : pieces){
+            if (p.getPieceColor() == Color.WHITE){
+                whiteScoreByMaterials += p.getValue();
+            } else {
+                blackScoreByMaterials += p.getValue();
+            }
+        }
+        System.out.println("WHITE MATERIALS: " + whiteScoreByMaterials);
+        System.out.println("BLACK MATERIALS: " + blackScoreByMaterials);
+        
+        // Check for checkmate or stalemate
+        Color currentTurn = whiteToMove ? Color.WHITE : Color.BLACK;
+        System.out.println("Checking game end for: " + currentTurn);
+        boolean inCheck = isInCheck(currentTurn);
+        System.out.println("In check: " + inCheck);
+        boolean hasLegal = hasLegalMoves(currentTurn);
+        System.out.println("Has legal moves: " + hasLegal);
+        
+        if (!hasLegal) {
+            if (inCheck) {
+                String winner = (currentTurn == Color.WHITE) ? "Black" : "White";
+                System.out.println("CHECKMATE! " + winner + " wins!");
+                JOptionPane.showMessageDialog(this, "Checkmate! " + winner + " wins!");
+            } else {
+                System.out.println("STALEMATE! Draw.");
+                JOptionPane.showMessageDialog(this, "Stalemate! It's a draw.");
+            }
+        }
+    }
+
+    private void update(Piece piece){
+        //remove double forward
+        if (piece instanceof Pawn){
+            ((Pawn) piece).updateHasMove();
+        }
     }
     
     public long getZobristKey() {
@@ -197,5 +249,126 @@ public class Board extends JPanel {
     
     static public boolean inBound(){
         return true;
+    }
+
+    public boolean isSquareAttackedBy(Position square, Color attackerColor) {
+        int[] squareIdx = Position.getOrdinal(square);
+        int sqRow = squareIdx[0];
+        int sqCol = squareIdx[1];
+        
+        for (Piece p : pieces) {
+            if (p.getPieceColor() != attackerColor) continue;
+            
+            // King attacks (1 square distance)
+            if (p instanceof King) {
+                int[] kingIdx = Position.getOrdinal(p.getPosition());
+                int rowDiff = Math.abs(kingIdx[0] - sqRow);
+                int colDiff = Math.abs(kingIdx[1] - sqCol);
+                if (rowDiff <= 1 && colDiff <= 1 && !(rowDiff == 0 && colDiff == 0)) {
+                    return true;
+                }
+                continue;
+            }
+            
+            // Pawn attacks exception to block for checks ot even captures
+            if (p instanceof Pawn) {
+                int[] pawnIdx = Position.getOrdinal(p.getPosition());
+                int pawnRow = pawnIdx[0];
+                int pawnCol = pawnIdx[1];
+
+                int attackRow = (attackerColor == Color.WHITE) ? pawnRow - 1 : pawnRow + 1;
+                
+                if (sqRow == attackRow && (sqCol == pawnCol - 1 || sqCol == pawnCol + 1)) {
+                    return true;
+                }
+                continue;
+            }
+            
+            // check moves and captures
+            p.getMoves();
+            ArrayList<String> attacks = p.getCaptureMoves();
+            for (String atk : attacks) {
+                try {
+                    if (Position.valueOf(atk) == square) {
+                        return true;
+                    }
+                } catch (IllegalArgumentException ex) {
+                    // ignore
+                }
+            }
+            
+            // For sliding pieces, check regular moves too
+            ArrayList<String> moves = p.getMoves();
+            for (String mv : moves) {
+                try {
+                    if (Position.valueOf(mv) == square) {
+                        return true;
+                    }
+                } catch (IllegalArgumentException ex) {
+                    // ignore
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isInCheck(Color kingColor) {
+        Position kingPos = null;
+        for (Piece p : pieces) {
+            if (p instanceof King && p.getPieceColor() == kingColor) {
+                kingPos = p.getPosition();
+                break;
+            }
+        }
+        if (kingPos == null) return false;
+        
+        Color enemyColor = (kingColor == Color.WHITE) ? Color.BLACK : Color.WHITE;
+        boolean inCheck = isSquareAttackedBy(kingPos, enemyColor);
+        return inCheck;
+    }
+
+    public boolean hasLegalMoves(Color color) {
+        for (Piece p : pieces) {
+            if (p.getPieceColor() != color) continue;
+            
+            // deep copy.
+            ArrayList<String> allMoves = new ArrayList<>(p.getMoves());
+            allMoves.addAll(p.getCaptureMoves());
+            
+            for (String moveStr : allMoves) {
+                try {
+                    Position targetPos = Position.valueOf(moveStr);
+                    if (isLegalMove(p, targetPos)) {
+                        System.out.println("Legal move found: " + p.getClass().getSimpleName() + " at " + p.getPosition() + " can move to " + targetPos);
+                        return true;
+                    }
+                } catch (IllegalArgumentException ex) {
+                    // ignore
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isLegalMove(Piece piece, Position targetPos) {
+        Position originalPos = piece.getPosition();
+        Piece captured = getPiece(targetPos);
+        
+        //simulate temporary move
+        piece.setPosition(targetPos);
+        if (captured != null) {
+            pieces.remove(captured);
+        }
+        
+        // if own king still in check if move, then keep being in check
+        boolean legal = !isInCheck(piece.getPieceColor());
+        
+        //revert
+        piece.setPosition(originalPos);
+        if (captured != null) {
+            pieces.add(captured);
+        }
+        
+        return legal;
     }
 }

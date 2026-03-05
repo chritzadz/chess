@@ -110,4 +110,9 @@ public class Rook implements Piece {
     public String getImagePath() {
         return imagePath;
     }
+
+    @Override
+    public int getValue() {
+        return 5;
+    }
 }
