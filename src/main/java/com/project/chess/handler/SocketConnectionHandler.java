@@ -109,6 +109,12 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
 
             String gameState = gameEngine.getGameStateString();
             System.out.println("Game state after move: " + gameState);
+            String winner = gameEngine.getWinner();
+
+            if (winner != null){
+                broadcastGameState("END:"+winner, userSessions);
+            }
+
 
             // Broadcast to all connected players in this game
             broadcastGameState(gameEngine.generateFEN(), userSessions);
