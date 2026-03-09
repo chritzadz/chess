@@ -147,10 +147,10 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         // Determine player1/player2 for this game
         int playerCount = userSessions.size();
         if (playerCount == 1) {
-            session.sendMessage(new TextMessage("REGISTERED:Player1"));
+            session.sendMessage(new TextMessage("REGISTERED:White"));
             System.out.println("Registered Player 1: " + userId + " for gameId: " + gameId);
         } else if (playerCount == 2) {
-            session.sendMessage(new TextMessage("REGISTERED:Player2"));
+            session.sendMessage(new TextMessage("REGISTERED:Black"));
             System.out.println("Registered Player 2: " + userId + " for gameId: " + gameId);
             // Game can start
             GameEngine gameEngine = gameEngines.get(gameId);
