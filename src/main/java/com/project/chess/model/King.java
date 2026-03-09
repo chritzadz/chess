@@ -9,6 +9,7 @@ public class King implements Piece {
     private ArrayList<Position> moves = new ArrayList<>();
     private ArrayList<Position> captureMoves = new ArrayList<>();
     private GameEngine engine;
+    private boolean hasMove = false;
 
     public King(Color color, Position currentPosition, GameEngine engine) {
         this.color = color;
@@ -48,6 +49,59 @@ public class King implements Piece {
                 }
             }
         }
+
+        //castle
+        if (!hasMove) {
+            //King side castling
+            int kingRow = (color == Color.WHITE) ? 7 : 0;
+            int kingCol = 4;
+            boolean canCastleKingside = true;
+
+            if (this.hasMove){
+                canCastleKingside = false;
+            }
+
+            for (int c = kingCol + 1; c <= kingCol + 2; c++) {
+                Position pos = Position.getPosition(kingRow, c);
+                if (engine.getPiece(pos) != null || engine.isSquareAttackedBy(pos, (color == Color.WHITE) ? Color.BLACK : Color.WHITE)) {
+                    canCastleKingside = false;
+                    break;
+                }
+            }
+
+            Position rookKingsidePos = Position.getPosition(kingRow, 7);
+            Piece rookKingside = engine.getPiece(rookKingsidePos);
+            if (canCastleKingside && rookKingside != null && rookKingside.getType().equals("Rook") && !(((Rook) rookKingside).hasMoved())) {
+                Position kingStart = Position.getPosition(kingRow, kingCol);
+                if (!engine.isSquareAttackedBy(kingStart, (color == Color.WHITE) ? Color.BLACK : Color.WHITE)) {
+                    moves.add(Position.getPosition(kingRow, kingCol + 2)); // Castling move
+                }
+            }
+
+            // Queenside castling
+            boolean canCastleQueenside = true;
+
+            if (this.hasMove){
+                canCastleQueenside = false;
+            }
+
+            for (int c = kingCol - 1; c >= kingCol - 3; c--) {
+                Position pos = Position.getPosition(kingRow, c);
+                if (engine.getPiece(pos) != null || engine.isSquareAttackedBy(pos, (color == Color.WHITE) ? Color.BLACK : Color.WHITE)) {
+                    canCastleQueenside = false;
+                    break;
+                }
+            }
+            // Check rook presence and it hasn't moved
+            Position rookQueensidePos = Position.getPosition(kingRow, 0);
+            Piece rookQueenside = engine.getPiece(rookQueensidePos);
+            if (canCastleQueenside && rookQueenside != null && rookQueenside.getType().equals("Rook") && !((Rook) rookQueenside).hasMoved()) {
+                Position kingStart = Position.getPosition(kingRow, kingCol);
+                if (!engine.isSquareAttackedBy(kingStart, (color == Color.WHITE) ? Color.BLACK : Color.WHITE)) {
+                    moves.add(Position.getPosition(kingRow, kingCol - 2)); // Castling move
+                }
+            }
+        }
         return moves;
     }
 
@@ -58,4 +112,5 @@ public class King implements Piece {
     @Override public String getImagePath() { return imagePath; }
     @Override public int getValue() { return 0; }
     @Override public String getType() { return "King"; }
+    public void updateHasMove() { hasMove = true; }
 }

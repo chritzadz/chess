@@ -115,27 +115,6 @@ public class GameEngine {
         ArrayList<Position> legalMoves = getLegalMovesFor(piece);
         if (!legalMoves.contains(to)) return false;
 
-        // XOR out the piece from old position
-        zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
-
-        Piece captured = getPiece(to);
-        if (captured != null) {
-            // XOR out the captured piece
-            zobristKey ^= Zobrist.getPieceSquareHash(captured, to);
-            pieces.remove(captured);
-            if (captured instanceof King) {
-                gameOver = true;
-                winner = currentTurn.name();
-            }
-        }
-
-        // Move the piece
-        piece.setPosition(to);
-
-        // XOR in the piece at new position
-        zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
-
-        // Pawn special handling
         if (piece instanceof Pawn) {
             ((Pawn) piece).updateHasMove();
             // Auto-promote to queen
@@ -150,8 +129,91 @@ public class GameEngine {
                 // XOR in the queen
                 zobristKey ^= Zobrist.getPieceSquareHash(promotedQueen, to);
             }
-        }
 
+            Piece captured = getPiece(to);
+            if (captured == null){
+                int[] idx1 = Position.getOrdinal(from);
+                Piece left = getPiece(Position.getPosition(idx1[0] - 1, idx1[1]));
+                Piece right = getPiece(Position.getPosition(idx1[0] + 1, idx1[1]));
+                if (left instanceof Pawn && ((Pawn)left).normalFirstMove) {
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
+                    piece.setPosition(to);
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
+                    zobristKey ^= Zobrist.getPieceSquareHash(left, Position.getPosition(idx1[0] - 1, idx1[1]));
+                }
+                else if (right instanceof Pawn) {
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
+                    piece.setPosition(to);
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
+                    zobristKey ^= Zobrist.getPieceSquareHash(right, Position.getPosition(idx1[0] + 1, idx1[1]));
+                } else {
+                    // XOR out the pawn from old position
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
+                    // Move the piece
+                    piece.setPosition(to);
+                    // XOR in the pawn at new position
+                    zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
+                }
+            } else {
+                // XOR out the pawn from old position
+                zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
+                // XOR out the captured piece
+                zobristKey ^= Zobrist.getPieceSquareHash(captured, to);
+                pieces.remove(captured);
+                if (captured instanceof King) {
+                    gameOver = true;
+                    winner = currentTurn.name();
+                }
+                // Move the piece
+                piece.setPosition(to);
+                // XOR in the pawn at new position
+                zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
+            }
+        } else if (piece instanceof King){
+            ((King) piece).updateHasMove();
+
+            //see castle move
+            int[] idx = Position.getOrdinal(to);
+            int row = idx[0];
+            int col = idx[1];
+            if (Math.abs(col - 4) == 2) { // Castling move 2 move king
+                int rookCol = (col == 6) ? 7 : 0;
+                Position rookFrom = Position.getPosition(row, rookCol);
+                Position rookTo = Position.getPosition(row, (col == 6) ? 5 : 3);
+                Piece rook = getPiece(rookFrom);
+                if (rook instanceof Rook && ((Rook) rook).hasMoved() == false) {
+                    // Move the rook
+                    // XOR out the rook from old position
+                    zobristKey ^= Zobrist.getPieceSquareHash(rook, rookFrom);
+                    rook.setPosition(rookTo);
+                    // XOR in the rook at new position
+                    zobristKey ^= Zobrist.getPieceSquareHash(rook, rookTo);
+                    ((Rook) rook).updateHasMove();
+                }
+            }
+        } else {
+            // XOR out the piece from old position
+            zobristKey ^= Zobrist.getPieceSquareHash(piece, from);
+
+            Piece captured = getPiece(to);
+            if (captured != null) {
+                // XOR out the captured piece
+                zobristKey ^= Zobrist.getPieceSquareHash(captured, to);
+                pieces.remove(captured);
+                if (captured instanceof King) {
+                    gameOver = true;
+                    winner = currentTurn.name();
+                }
+            }
+
+            // Move the piece
+            piece.setPosition(to);
+
+            // XOR in the piece at new position
+            zobristKey ^= Zobrist.getPieceSquareHash(piece, to);
+
+
+        }
         // Toggle side to move
         zobristKey ^= Zobrist.getSideToMoveHash();
         whiteToMove = !whiteToMove;
