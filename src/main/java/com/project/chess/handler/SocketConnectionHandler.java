@@ -128,8 +128,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             System.out.println("Turn switched. Next turn: " + (!isPlayer1Turn ? "Player 1" : "Player 2"));
 
         } catch (Exception e) {
-            System.err.println("Error processing move: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Error processing move: " + e.getMessage());
             session.sendMessage(new TextMessage("ERROR:Invalid move - " + e.getMessage()));
         }
     }
