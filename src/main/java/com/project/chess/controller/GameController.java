@@ -34,5 +34,11 @@ public class GameController {
         Games game = gamesRepository.findById(id).orElse(null);
         return ResponseEntity.ok(game);
     }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> postGame() {
+        String id = gamesRepository.save(new Games()).getId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(id);
+    }
 }
 
