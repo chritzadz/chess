@@ -11,6 +11,7 @@ public class Pawn implements Piece {
     private ArrayList<Position> captureMoves = new ArrayList<>();
     private boolean hasMove = false;
     private GameEngine engine;
+    public boolean normalFirstMove = true;
 
     public Pawn(Color color, Position currentPosition, GameEngine engine) {
         this.color = color;
@@ -52,6 +53,28 @@ public class Pawn implements Piece {
                             Piece p = engine.getPiece(capture);
                             if (p != null && p.getPieceColor() != this.color) {
                                 captureMoves.add(capture);
+                            }
+                        }
+                    }
+                }
+
+                // Un-Passant
+                // very strict condition
+                for (int dc : new int[]{-1, 1}) {
+                    int newCol = col + dc;
+                    if (newCol == 6){
+                        Position leftCapture = Position.getPosition(row, newCol);
+                        Position rightCapture = Position.getPosition(row, newCol);
+                        if (leftCapture != null){
+                            Piece p = engine.getPiece(leftCapture);
+                            if (p != null && p.getPieceColor() != this.color && p.getType().equals("Pawn") && !((Pawn) p).normalFirstMove) {
+                                captureMoves.add(Position.getPosition(forward, newCol));
+                            }
+                        }
+                        else if (rightCapture != null){
+                            Piece p = engine.getPiece(rightCapture);
+                            if (p != null && p.getPieceColor() != this.color && p.getType().equals("Pawn") && !((Pawn) p).normalFirstMove) {
+                                captureMoves.add(Position.getPosition(forward, newCol));
                             }
                         }
                     }

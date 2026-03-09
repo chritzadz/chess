@@ -10,6 +10,7 @@ public class Rook implements Piece {
     private ArrayList<Position> moves = new ArrayList<>();
     private ArrayList<Position> captureMoves = new ArrayList<>();
     private GameEngine engine;
+    private boolean hasMove = false;
 
     public Rook(Color color, Position currentPosition, GameEngine engine) {
         this.color = color;
@@ -56,4 +57,6 @@ public class Rook implements Piece {
     @Override public String getImagePath() { return imagePath; }
     @Override public int getValue() { return 5; }
     @Override public String getType() { return "Rook"; }
+    public boolean hasMoved() { return hasMove; }
+    public void updateHasMove() { hasMove = true; }
 }
