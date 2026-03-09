@@ -1,6 +1,0 @@
-spring:
-  datasource:
-    url: ep-summer-union-ais6nzl8-pooler.c-4.us-east-1.aws.neon.tech/neondb
-    username: neondb_owner
-    password: npg_V0hIbkSlR6cn
-    driver-class-name: org.postgresql.Driver
