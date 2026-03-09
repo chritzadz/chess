@@ -2,12 +2,12 @@ package com.project.chess.handler;
 
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import com.project.chess.model.GameEngine;
 
@@ -17,7 +17,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
     // Map<gameId, GameEngine>
     private static final Map<String, GameEngine> gameEngines = new HashMap<>();
     // Map<gameId, Boolean> (true: player1's turn, false: player2's turn)
-    private static final Map<String, Boolean> gameTurns = new HashMap<>();
+    private static final Map<String, Boolean> gameTurns = new LinkedHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -27,7 +27,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             session.close();
             return;
         }
-        gameUserSessions.computeIfAbsent(gameId, k -> new HashMap<>());
+        gameUserSessions.computeIfAbsent(gameId, k -> new LinkedHashMap<>());
         gameEngines.computeIfAbsent(gameId, k -> new GameEngine());
         gameTurns.putIfAbsent(gameId, true); // Player 1's turn by default
         System.out.println("Connection established for gameId: " + gameId + ", session: " + session.getId());
