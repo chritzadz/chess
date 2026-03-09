@@ -51,5 +51,5 @@ public class Knight implements Piece {
     @Override public void setPosition(Position pos) { this.currentPosition = pos; }
     @Override public String getImagePath() { return imagePath; }
     @Override public int getValue() { return 3; }
-    @Override public String getType() { return "Knight"; }
+    @Override public String getType() { return "Night"; }
 }
