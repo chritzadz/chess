@@ -22,6 +22,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String gameId = getGameId(session);
+        System.out.println(gameId);
         if (gameId == null) {
             session.close();
             return;
@@ -123,7 +124,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage("ERROR:Invalid move - " + e.getMessage()));
         }
     }
-    
+
     private void handleUserRegistration(WebSocketSession session, String msg, String gameId) throws Exception {
         Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
         if (userSessions == null) return;
@@ -162,7 +163,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage("ERROR:Game is full"));
         }
     }
-    
+
     private String findUserIdBySession(WebSocketSession session, Map<String, WebSocketSession> userSessions) {
         for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
             if (entry.getValue().getId().equals(session.getId())) {
@@ -171,7 +172,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
         return null;
     }
-    
+
     private String getSenderName(String userId, String gameId) {
         Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
         if (userSessions == null) return userId;
@@ -183,7 +184,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
         return userId;
     }
-    
+
     private boolean isCorrectPlayerTurn(String userId, String gameId) {
         Map<String, WebSocketSession> userSessions = gameUserSessions.get(gameId);
         if (userSessions == null || userSessions.size() < 2) {
@@ -200,7 +201,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
         return false;
     }
-    
+
     private void broadcastGameState(String gameState, Map<String, WebSocketSession> userSessions) {
         System.out.println("Broadcasting game state to " + userSessions.size() + " players");
         for (Map.Entry<String, WebSocketSession> entry : userSessions.entrySet()) {
