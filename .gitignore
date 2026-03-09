@@ -25,3 +25,4 @@ dist-ssr
 
 src/main/resources/application-local.yaml
 target/
+target/*
