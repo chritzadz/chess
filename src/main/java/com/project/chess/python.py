@@ -16,7 +16,7 @@ async def receive_messages(websocket):
         print(f"Received: {response}")
 
 async def connect():
-    uri = "ws://localhost:8080/game"
+    uri = "ws://localhost:8080/game?id=3"
     username = input("Enter your username: ")
     async with websockets.connect(uri) as websocket:
         await asyncio.gather(

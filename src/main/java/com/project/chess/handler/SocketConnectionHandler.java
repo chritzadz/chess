@@ -111,7 +111,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             System.out.println("Game state after move: " + gameState);
 
             // Broadcast to all connected players in this game
-            broadcastGameState(gameState, userSessions);
+            broadcastGameState(gameEngine.generateFEN(), userSessions);
 
             // Switch turns
             boolean isPlayer1Turn = gameTurns.getOrDefault(gameId, true);

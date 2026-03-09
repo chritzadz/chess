@@ -317,4 +317,35 @@ public class GameEngine {
         }
         return sb.toString();
     }
+
+    public String generateFEN() {
+    StringBuilder fen = new StringBuilder();
+    for (int row = 0; row < 8; row++) {
+        int emptyCount = 0;
+        for (int col = 0; col < 8; col++) {
+            Position pos = Position.getPosition(row, col);
+            Piece piece = null;
+            for (Piece p : pieces) {
+                if (p.getPosition().equals(pos)) {
+                    piece = p;
+                    break;
+                }
+            }
+            if (piece == null) {
+                emptyCount++;
+            } else {
+                if (emptyCount > 0) {
+                    fen.append(emptyCount);
+                    emptyCount = 0;
+                }
+                String symbol = piece.getType().substring(0,1);
+                symbol = piece.getPieceColor() == Color.WHITE ? symbol.toUpperCase() : symbol.toLowerCase();
+                fen.append(symbol);
+            }
+        }
+        if (emptyCount > 0) fen.append(emptyCount);
+        if (row < 7) fen.append("/");
+    }
+    return fen.toString();
+}
 }
