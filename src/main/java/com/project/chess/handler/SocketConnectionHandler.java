@@ -105,7 +105,10 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         try {
             GameEngine gameEngine = gameEngines.get(gameId);
             System.out.println("Processing move for " + sender);
-            gameEngine.processMove(msg);
+            String result = gameEngine.processMove(msg);
+            if (result.equals("INVALID")){
+                throw new RuntimeException(result);
+            }
 
             String gameState = gameEngine.getGameStateString();
             System.out.println("Game state after move: " + gameState);
