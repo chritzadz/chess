@@ -12,3 +12,5 @@ websocket connection always send game state in perspective of player 1,
 send move by sending message ToFrom (e.g. e2e4). Will defnitely do a proper chess notation like e2,Bd6,Qxa5 (but for now im too lazy about it so ToFrom format works...)
 
 enjoy hehe
+
+database is to manage games. It only requires a single table 'games' with and id. Since each games is limited to 2 websocket client connection
