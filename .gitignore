@@ -26,3 +26,5 @@ dist-ssr
 src/main/resources/application-local.yaml
 target/
 target/*
+
+target/classes/application-local.yaml
