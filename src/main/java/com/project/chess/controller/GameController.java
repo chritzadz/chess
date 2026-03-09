@@ -37,7 +37,7 @@ public class GameController {
 
     @PostMapping("/create")
     public ResponseEntity<?> postGame() {
-        String id = gamesRepository.save(new Games()).getId();
+        Long id = gamesRepository.save(new Games()).getId();
         return ResponseEntity.status(HttpStatus.CREATED).body(id);
     }
 }
