@@ -22,7 +22,7 @@ public class GameService {
         engine.reset(color);
     }
 
-    public GameState getGameState() {
+    public GameState getGameState(String gameId) {
         GameState state = new GameState();
         
         List<GameState.PieceDTO> pieceDTOs = new ArrayList<>();

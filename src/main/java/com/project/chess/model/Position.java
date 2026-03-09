@@ -32,4 +32,12 @@ public enum Position {
         int row = 8 - (rank - '0');
         return getPosition(row, col);
     }
+
+    public static String toAlgebraic(Position p) {
+        if (p == null) return "";
+        int[] idx = Position.getOrdinal(p);
+        char file = (char) ('a' + idx[1]);
+        int rank = 8 - idx[0];
+        return "" + file + rank;
+    }
 }

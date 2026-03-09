@@ -1,5 +1,4 @@
 package com.project.chess.handler;
-
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -8,8 +7,11 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import com.project.chess.model.GameEngine;
+import com.project.chess.model.Piece;
+import com.project.chess.model.Position;
 
 public class SocketConnectionHandler extends TextWebSocketHandler {
     // Map<gameId, Map<userId, WebSocketSession>>
@@ -78,6 +80,33 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         // Handle user registration
         if (msg.startsWith("USER:")) {
             handleUserRegistration(session, msg, gameId);
+            return;
+        }
+
+        // Handle move request (REQUEST:e2)
+        if (msg.startsWith("REQUEST:")) {
+            String square = msg.substring(8).trim();
+            GameEngine gameEngine = gameEngines.get(gameId);
+            Position pos = Position.fromAlgebraic(square);
+            if (pos == null) {
+                session.sendMessage(new TextMessage("ERROR:Invalid square"));
+                return;
+            }
+            Piece piece = gameEngine.getPiece(pos);
+            if (piece == null) {
+                session.sendMessage(new TextMessage("ERROR:No piece at square"));
+                return;
+            }
+            var moves = piece.getMoves();
+            var captures = piece.getCaptureMoves();
+            List<String> moveList = new ArrayList<>();
+            for (Position p : moves) {
+                moveList.add(Position.toAlgebraic(p));
+            }
+            for (Position p : captures) {
+                moveList.add(Position.toAlgebraic(p));
+            }
+            session.sendMessage(new TextMessage("MOVES:" + String.join(",", moveList)));
             return;
         }
 
