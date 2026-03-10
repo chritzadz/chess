@@ -192,7 +192,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             // Game can start
             GameEngine gameEngine = gameEngines.get(gameId);
             String initialState = gameEngine.getGameStateString();
-            broadcastGameState(initialState, userSessions);
+            broadcastGameState(gameEngine.generateFEN(), userSessions);
             System.out.println("Game started for gameId: " + gameId + ". Player 1's turn");
         } else {
             System.out.println("Game full, rejecting: " + userId);
