@@ -84,31 +84,31 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
         }
 
         // Handle move request (REQUEST:e2)
-        if (msg.startsWith("REQUEST:")) {
-            String square = msg.substring(8).trim();
-            GameEngine gameEngine = gameEngines.get(gameId);
-            Position pos = Position.fromAlgebraic(square);
-            if (pos == null) {
-                session.sendMessage(new TextMessage("ERROR:Invalid square"));
-                return;
-            }
-            Piece piece = gameEngine.getPiece(pos);
-            if (piece == null) {
-                session.sendMessage(new TextMessage("ERROR:No piece at square"));
-                return;
-            }
-            var moves = piece.getMoves();
-            var captures = piece.getCaptureMoves();
-            List<String> moveList = new ArrayList<>();
-            for (Position p : moves) {
-                moveList.add(Position.toAlgebraic(p));
-            }
-            for (Position p : captures) {
-                moveList.add(Position.toAlgebraic(p));
-            }
-            session.sendMessage(new TextMessage("MOVES:" + String.join(",", moveList)));
-            return;
-        }
+        // if (msg.startsWith("REQUEST:")) {
+        //     String square = msg.substring(8).trim();
+        //     GameEngine gameEngine = gameEngines.get(gameId);
+        //     Position pos = Position.fromAlgebraic(square);
+        //     if (pos == null) {
+        //         session.sendMessage(new TextMessage("ERROR:Invalid square"));
+        //         return;
+        //     }
+        //     Piece piece = gameEngine.getPiece(pos);
+        //     if (piece == null) {
+        //         session.sendMessage(new TextMessage("ERROR:No piece at square"));
+        //         return;
+        //     }
+        //     var moves = piece.getMoves();
+        //     var captures = piece.getCaptureMoves();
+        //     List<String> moveList = new ArrayList<>();
+        //     for (Position p : moves) {
+        //         moveList.add(Position.toAlgebraic(p));
+        //     }
+        //     for (Position p : captures) {
+        //         moveList.add(Position.toAlgebraic(p));
+        //     }
+        //     session.sendMessage(new TextMessage("MOVES:" + String.join(",", moveList)));
+        //     return;
+        // }
 
         // Find userId for this session
         String userId = findUserIdBySession(session, userSessions);
@@ -246,6 +246,41 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
                 if (entry.getValue().isOpen()) {
                     entry.getValue().sendMessage(new TextMessage(gameState));
                     System.out.println("Sent game state to: " + entry.getKey());
+
+                    // Send all pieces' moves instead for every sync position.
+                    String gameId = entry.getKey();
+                    GameEngine gameEngine = gameEngines.get(gameId);
+                    if (gameEngine != null) {
+                        List<Piece> pieces = gameEngine.getPieces();
+                        List<Map<String, Object>> pieceMovesList = new ArrayList<>();
+                        for (Piece piece : pieces) {
+                            Map<String, Object> pieceInfo = new HashMap<>();
+                            pieceInfo.put("piece", Position.toAlgebraic(piece.getPosition()));
+                            List<String> moves = new ArrayList<>();
+                            for (Position p : piece.getMoves()) {
+                                moves.add(Position.toAlgebraic(p));
+                            }
+                            pieceInfo.put("moves", moves);
+                            List<String> captures = new ArrayList<>();
+                            for (Position p : piece.getCaptureMoves()) {
+                                captures.add(Position.toAlgebraic(p));
+                            }
+                            pieceInfo.put("captures", captures);
+                            pieceInfo.put("type", piece.getType());
+                            pieceInfo.put("color", piece.getPieceColor().toString());
+                            pieceMovesList.add(pieceInfo);
+                        }
+                        Map<String, Object> payload = new HashMap<>();
+                        payload.put("pieceMoves", pieceMovesList);
+                        String json;
+                        try {
+                            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                            json = mapper.writeValueAsString(payload);
+                        } catch (Exception e) {
+                            json = "ERROR:Could not serialize moves";
+                        }
+                        entry.getValue().sendMessage(new TextMessage("MOVES:"+json));
+                    }
                 } else {
                     System.out.println("Session closed for: " + entry.getKey());
                 }
