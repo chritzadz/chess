@@ -150,6 +150,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
 
             // Broadcast to all connected players in this game
             broadcastGameState(gameEngine.generateFEN(), userSessions);
+            System.out.println(gameEngine.generateFEN());
 
             // Switch turns
             boolean isPlayer1Turn = gameTurns.getOrDefault(gameId, true);
@@ -195,7 +196,6 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             broadcastGameState(gameEngine.generateFEN(), userSessions);
 
             // Send initial moves to all users
-            if (gameEngine != null) {
                 List<Piece> pieces = gameEngine.getPieces();
                 List<Map<String, Object>> pieceMovesList = new ArrayList<>();
                 for (Piece piece : pieces) {
@@ -229,7 +229,6 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
                         userSession.sendMessage(new TextMessage("MOVES:" + json));
                     }
                 }
-            }
             System.out.println("Game started for gameId: " + gameId + ". Player 1's turn");
         } else {
             System.out.println("Game full, rejecting: " + userId);
