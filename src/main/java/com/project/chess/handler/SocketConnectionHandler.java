@@ -193,6 +193,43 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
             GameEngine gameEngine = gameEngines.get(gameId);
             String initialState = gameEngine.getGameStateString();
             broadcastGameState(gameEngine.generateFEN(), userSessions);
+
+            // Send initial moves to all users
+            if (gameEngine != null) {
+                List<Piece> pieces = gameEngine.getPieces();
+                List<Map<String, Object>> pieceMovesList = new ArrayList<>();
+                for (Piece piece : pieces) {
+                    Map<String, Object> pieceInfo = new HashMap<>();
+                    pieceInfo.put("piece", Position.toAlgebraic(piece.getPosition()));
+                    List<String> moves = new ArrayList<>();
+                    for (Position p : piece.getMoves()) {
+                        moves.add(Position.toAlgebraic(p));
+                    }
+                    pieceInfo.put("moves", moves);
+                    List<String> captures = new ArrayList<>();
+                    for (Position p : piece.getCaptureMoves()) {
+                        captures.add(Position.toAlgebraic(p));
+                    }
+                    pieceInfo.put("captures", captures);
+                    pieceInfo.put("type", piece.getType());
+                    pieceInfo.put("color", piece.getPieceColor().toString());
+                    pieceMovesList.add(pieceInfo);
+                }
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("pieceMoves", pieceMovesList);
+                String json;
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    json = mapper.writeValueAsString(payload);
+                } catch (Exception e) {
+                    json = "ERROR:Could not serialize moves";
+                }
+                for (WebSocketSession userSession : userSessions.values()) {
+                    if (userSession.isOpen()) {
+                        userSession.sendMessage(new TextMessage("MOVES:" + json));
+                    }
+                }
+            }
             System.out.println("Game started for gameId: " + gameId + ". Player 1's turn");
         } else {
             System.out.println("Game full, rejecting: " + userId);
