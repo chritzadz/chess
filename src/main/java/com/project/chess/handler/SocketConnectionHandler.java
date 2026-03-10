@@ -315,6 +315,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
                         } catch (Exception e) {
                             json = "ERROR:Could not serialize moves";
                         }
+                        System.out.println(json);
                         entry.getValue().sendMessage(new TextMessage("MOVES:"+json));
                     }
                 } else {
