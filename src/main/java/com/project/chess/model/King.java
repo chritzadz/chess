@@ -34,18 +34,15 @@ public class King implements Piece {
             if (newRow >= 0 && newRow <= 7 && newCol >= 0 && newCol <= 7) {
                 Position pos = Position.getPosition(newRow, newCol);
                 Piece p = engine.getPiece(pos);
-                
-                // King can't move to attacked squares
                 Color enemyColor = (this.color == Color.WHITE) ? Color.BLACK : Color.WHITE;
+                //King cannot move to attacked square (sacrifice prevention)
                 if (engine.isSquareAttackedBy(pos, enemyColor)) {
                     continue;
                 }
-                
                 if (p == null) {
                     moves.add(pos);
                 } else if (p.getPieceColor() != this.color) {
                     captureMoves.add(pos);
-                    moves.add(pos);
                 }
             }
         }
@@ -102,7 +99,9 @@ public class King implements Piece {
                 }
             }
         }
-        return moves;
+        ArrayList<Position> allMoves = new ArrayList<>(moves);
+        allMoves.addAll(captureMoves);
+        return allMoves;
     }
 
     @Override public ArrayList<Position> getCaptureMoves() { return captureMoves; }

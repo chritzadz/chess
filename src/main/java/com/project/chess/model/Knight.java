@@ -37,12 +37,13 @@ public class Knight implements Piece {
                 if (p == null) {
                     moves.add(pos);
                 } else if (p.getPieceColor() != this.color) {
-                    moves.add(pos);
                     captureMoves.add(pos);
                 }
             }
         }
-        return moves;
+        ArrayList<Position> allMoves = new ArrayList<>(moves);
+        allMoves.addAll(captureMoves);
+        return allMoves;
     }
 
     @Override public ArrayList<Position> getCaptureMoves() { return captureMoves; }

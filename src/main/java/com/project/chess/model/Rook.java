@@ -47,7 +47,9 @@ public class Rook implements Piece {
                 c += dir[1];
             }
         }
-        return moves;
+        ArrayList<Position> allMoves = new ArrayList<>(moves);
+        allMoves.addAll(captureMoves);
+        return allMoves;
     }
 
     @Override public ArrayList<Position> getCaptureMoves() { return captureMoves; }

@@ -1,4 +1,5 @@
 package com.project.chess.handler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -316,7 +317,7 @@ public class SocketConnectionHandler extends TextWebSocketHandler {
                             payload.put("pieceMoves", pieceMovesList);
                             String json;
                             try {
-                                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                                ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                                 json = mapper.writeValueAsString(payload);
                             } catch (Exception e) {
                                 json = "ERROR:Could not serialize moves";

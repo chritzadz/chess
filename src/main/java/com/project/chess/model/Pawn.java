@@ -110,7 +110,9 @@ public class Pawn implements Piece {
                 }
             }
         }
-        return moves;
+        ArrayList<Position> allMoves = new ArrayList<>(moves);
+        allMoves.addAll(captureMoves);
+        return allMoves;
     }
 
     public void updateHasMove() { this.hasMove = true; }
